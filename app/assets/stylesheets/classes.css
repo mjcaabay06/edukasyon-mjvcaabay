@@ -1,0 +1,24 @@
+.fa-star{
+	font-size: 20px;
+	color: #EFEEF5;
+}
+.fa-star.checked{
+	color: orange;
+}
+
+form.form-inline{
+	margin-top: 15px;
+}
+#overall-rate .fa-star{
+	font-size: 30px;
+}
+#overall-rate .score span{
+	font-size: 32px;
+}
+#overall-rate .count small{
+	color: #757575;
+}
+form .fa-star{
+	font-size: 30px;
+	cursor: pointer;
+}

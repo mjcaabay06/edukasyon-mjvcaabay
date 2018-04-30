@@ -1,0 +1,145 @@
+<div class="col-md-12">
+	<div class="row">
+		<div class="page-header">
+			<h3 class="pull-left">Class: <%= @subject.subject_name %></h3>
+			<!-- <form class="pull-right form-inline" role="form" method="get" action="">
+				<div class="form-group">
+					<input type="text" class="form-control" placeholder="Search Class" name="query" value="<%= params[:query] unless params[:query].blank? %>">
+				</div>
+				<div class="form-group">
+					<button type="submit" class="btn btn-primary" value="Search">
+						<i class="glyphicon glyphicon-search"></i>
+					</button>
+				</div>
+			</form> -->
+			<div class="clearfix"></div>
+		</div>
+	</div>
+</div>
+
+<div class="col-md-12">
+	<div class="row">
+		<% @subjectProfessor.reorder('professors.last_name').each do |sp| %>
+		<%
+			totalRating = RatingServices.new(subject_id: sp.subject_id, professor_id: sp.professor_id).count_rating
+			averageRating = RatingServices.new(subject_id: sp.subject_id, professor_id: sp.professor_id).average_rating
+		%>
+			<div class="col-xs-3">
+				<div class="panel panel-default">
+					<div class="panel-heading">
+						<h3 class="panel-title pull-left" id="profname-<%= sp.id %>"><%= sp.professor.last_name + ', ' + sp.professor.first_name %></h3>
+						<a href="#" class="pull-right">
+							<i class="glyphicon glyphicon-chevron-right"></i>
+						</a>
+						<div class="clearfix"></div>
+					</div>
+					<div class="panel-body" id="overall-rate">
+						<div class="score">
+							<span><%= averageRating.blank? ? 0 : averageRating %></span>
+							out of 5
+						</div>
+						<% for i in 1..5 %>
+							<i class="fa fa-star <%= i <= averageRating.floor ? 'checked' : '' %>"></i>
+						<% end %>
+						<div class="count">
+							<small><%= totalRating %> Ratings</small>
+						</div>
+					</div>
+					<div class="panel-footer text-center">
+						<button <%= 'disabled="disabled"' if ProfessorRating.check_rating_professor({ professor_id: sp.professor_id, subject_id: sp.subject_id, student_id: 1 }).count > 0 %> type="button" class="btn btn-primary btn-rate" data-id="<%= sp.id %>" data-profid="<%= sp.professor_id %>">Rate Professor</button>
+						<button type="button" class="btn btn-primary btn-review" data-id="<%= sp.id %>" data-profid="<%= sp.professor_id %>">Reviews</button>
+					</div>
+				</div>
+			</div>
+		<% end %>
+	</div>
+</div>
+<div id="ratingModal" class="modal" role="dialog">
+	<div class="modal-dialog">
+		<div class="modal-content">
+			<form class="form-inline" method="get" style="margin: 0">
+				<div class="modal-header">
+					<button type="button" class="close" data-dismiss="modal">&times;</button>
+	        		<h4 class="modal-title">Rate Professor: </h4>
+				</div>
+				<div class="modal-body">
+					<div id="alert-message"></div>
+					<div class="col-md-12">
+						<div class="col-md-12 text-center" id="new-rate">
+							<i class="fa fa-star"></i>
+							<i class="fa fa-star"></i>
+							<i class="fa fa-star"></i>
+							<i class="fa fa-star"></i>
+							<i class="fa fa-star"></i>
+						</div>
+						<div class="col-md-12" style="margin-top: 20px">
+							<input type="hidden" value="" name="sp_id">
+							<input type="hidden" value="" name="prof_id">
+							<textarea style="height: 100px;" name="review_detail" class="form-control" placeholder="Review Detail"></textarea>
+						</div>
+					</div>
+					<div class="clearfix"></div>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-primary pull-right" id="btn-submit">Submit</button>
+				</div>
+				<div class="clearfix"></div>
+			</form>
+		</div>
+	</div>
+</div>
+<script type="text/javascript">
+	$(document).ready(function(){
+		$(".btn-rate").on('click', function(){
+			var id = $(this).data('id');
+			var profId = $(this).data('profid');
+			$("input[name=sp_id]").val(id);
+			$("input[name=prof_id]").val(profId);
+			$("#ratingModal .modal-header h4").html('Rate Professor: ' + $('#profname-' + id).html());
+			$("#alert-message").html('');
+			$("#ratingModal").modal('show');
+		});
+
+		$("#new-rate .fa-star").on('click', function(){
+			var clickedIndex = $(this).index();
+			$("#new-rate .fa-star").removeClass('checked');
+
+			for (var x = 0; x <= clickedIndex; x++) {
+				$("#new-rate .fa-star:eq(" + x + ")").addClass('checked');
+			}
+		});
+
+		$("#btn-submit").on('click', function(){
+			var startCnt = $("#new-rate .fa-star.checked").length;
+			var reviewDetail = $("textarea[name=review_detail]").val();
+			var profId = $("input[name=prof_id]").val();
+			var alert = '';
+
+			$.post("/class", {
+				rate: startCnt,
+				review_detail: reviewDetail,
+				subject_id: <%= @subject.id %>,
+				professor_id: profId,
+				student_id: 1
+			})
+			.done(function(data){
+				if (data.status == 'success'){
+					alert = '<div class="alert alert-dismissible alert-success"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>You have successfully rate the professor.</div>';
+					reset();
+					setTimeout(function(){
+						$("#ratingModal").modal('hide');
+					},2000);
+				} else {
+					alert = '<div class="alert alert-dismissible alert-danger"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">&times;</button>There was an error rating the professor.</div>';
+				}
+				$("#alert-message").html(alert);
+			});
+		});
+	});
+
+	function reset() {
+		$("textarea[name=review_detail]").val('');
+		$("#new-rate .fa-star").removeClass('checked');
+		$("#btn-submit").attr('disabled','disabled');
+	}
+</script>
